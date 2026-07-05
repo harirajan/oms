@@ -38,7 +38,8 @@ class SagaOrchestratorTest {
         shippingPort = new FakeShippingPort();
         orchestrator = new SagaOrchestrator(orderRepository, inventoryPort, paymentPort, shippingPort);
 
-        order = Order.create(UUID.randomUUID(), new BigDecimal("100.00"), "INR");
+        order = Order.create(UUID.randomUUID(), "INR");
+        order.addLine("SKU-1", 1, new BigDecimal("100.00"));
         orderId = order.getId();
 
         when(orderRepository.findById(orderId)).thenReturn(Optional.of(order));

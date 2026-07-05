@@ -7,6 +7,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 import java.net.URI;
+import java.util.List;
 import java.util.UUID;
 
 @RestController
@@ -21,8 +22,11 @@ public class OrderController {
 
     @PostMapping
     public ResponseEntity<OrderResponse> createOrder(@Valid @RequestBody CreateOrderRequest request) {
-        Order order = orderService.createOrder(
-                request.customerId(), request.totalAmount(), request.currency());
+        List<OrderService.OrderLineRequest> lines = request.lines().stream()
+                .map(l -> new OrderService.OrderLineRequest(l.sku(), l.quantity(), l.unitPrice()))
+                .toList();
+
+        Order order = orderService.createOrder(request.customerId(), request.currency(), lines);
 
         return ResponseEntity
                 .created(URI.create("/orders/" + order.getId()))
