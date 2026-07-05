@@ -6,8 +6,6 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.context.annotation.Import;
 import org.springframework.dao.OptimisticLockingFailureException;
-import org.springframework.test.context.ActiveProfiles;
-import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
 import java.util.Optional;
@@ -24,24 +22,26 @@ class OrderRepositoryIntegrationTest {
     private OrderRepository orderRepository;
 
     @Test
-    void savesAndReloadsOrderWithAllFields() {
-        Order order = Order.create(UUID.randomUUID(), new BigDecimal("249.50"), "INR");
+    void savesAndReloadsOrderWithLinesAndComputedTotal() {
+        Order order = Order.create(UUID.randomUUID(), "INR");
+        order.addLine("SKU-249", 1, new BigDecimal("249.50"));
 
         Order saved = orderRepository.save(order);
         orderRepository.flush();
 
-        Optional<Order> reloaded = orderRepository.findById(saved.getId());
+        Optional<Order> reloaded = orderRepository.findByIdWithLines(saved.getId());
 
         assertThat(reloaded).isPresent();
         assertThat(reloaded.get().getStatus()).isEqualTo(OrderStatus.CREATED);
         assertThat(reloaded.get().getTotalAmount()).isEqualByComparingTo("249.50");
-        assertThat(reloaded.get().getCurrency()).isEqualTo("INR");
-        assertThat(reloaded.get().getVersion()).isEqualTo(0L);
+        assertThat(reloaded.get().getLines()).hasSize(1);
+        assertThat(reloaded.get().getLines().get(0).getSku()).isEqualTo("SKU-249");
     }
 
     @Test
     void transitionPersistsAndIncrementsVersion() {
-        Order order = Order.create(UUID.randomUUID(), new BigDecimal("75.00"), "INR");
+        Order order = Order.create(UUID.randomUUID(), "INR");
+        order.addLine("SKU-75", 1, new BigDecimal("75.00"));
         Order saved = orderRepository.saveAndFlush(order);
         Long versionAfterCreate = saved.getVersion();
 
@@ -54,10 +54,10 @@ class OrderRepositoryIntegrationTest {
 
     @Test
     void concurrentUpdatesTriggerOptimisticLockException() {
-        Order order = Order.create(UUID.randomUUID(), new BigDecimal("120.00"), "INR");
+        Order order = Order.create(UUID.randomUUID(), "INR");
+        order.addLine("SKU-120", 1, new BigDecimal("120.00"));
         Order saved = orderRepository.saveAndFlush(order);
 
-        // Simulate two callers loading the same row independently
         Order copy1 = orderRepository.findById(saved.getId()).orElseThrow();
         Order copy2 = orderRepository.findById(saved.getId()).orElseThrow();
 

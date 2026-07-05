@@ -8,7 +8,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
-import java.util.NoSuchElementException;
+import java.util.List;
 import java.util.UUID;
 
 @Service
@@ -21,14 +21,17 @@ public class OrderService {
     }
 
     @Transactional
-    public Order createOrder(UUID customerId, BigDecimal totalAmount, String currency) {
-        Order order = Order.create(customerId, totalAmount, currency);
+    public Order createOrder(UUID customerId, String currency, List<OrderLineRequest> lineItems) {
+        Order order = Order.create(customerId, currency);
+        for (OrderLineRequest line : lineItems) {
+            order.addLine(line.sku(), line.quantity(), line.unitPrice());
+        }
         return orderRepository.save(order);
     }
 
     @Transactional(readOnly = true)
     public Order getOrder(UUID orderId) {
-        return orderRepository.findById(orderId)
+        return orderRepository.findByIdWithLines(orderId)
                 .orElseThrow(() -> new OrderNotFoundException(orderId));
     }
 
@@ -37,5 +40,8 @@ public class OrderService {
         Order order = getOrder(orderId);
         order.transitionTo(OrderStatus.CANCELLED);
         return orderRepository.save(order);
+    }
+
+    public record OrderLineRequest(String sku, int quantity, BigDecimal unitPrice) {
     }
 }
