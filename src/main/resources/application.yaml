@@ -1,0 +1,32 @@
+spring:
+  application:
+    name: order-service
+
+  datasource:
+    url: jdbc:postgresql://localhost:5433/orderdb
+    username: oms_user
+    password: oms_pass
+    driver-class-name: org.postgresql.Driver
+
+  jpa:
+    hibernate:
+      ddl-auto: validate
+    open-in-view: false
+    properties:
+      hibernate:
+        format_sql: true
+    show-sql: true
+
+  flyway:
+    enabled: true
+    locations: classpath:db/migration
+    baseline-on-migrate: true
+
+server:
+  port: 8091
+
+logging:
+  level:
+    com.hari.oms.order: DEBUG
+    org.hibernate.SQL: DEBUG
+    org.flywaydb: DEBUG
